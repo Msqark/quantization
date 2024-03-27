@@ -1,0 +1,459 @@
+# -*- coding: utf-8 -*-
+
+import openpyxl
+import pandas as pd
+from openpyxl import load_workbook
+import pyarrow
+# import numpy as np
+
+# 创建一个 19x19 的全为 0 的矩阵，第1行1列为坐标轴数据区域
+matrix = [['0' for _ in range(19)] for _ in range(19)]
+# matrix = [['10'] * 20 for _ in range(19)]
+# 打印矩阵
+print(matrix)
+
+
+# 打开 Excel 文件 1
+# workbook = openpyxl.load_workbook('L1003.xlsx')
+# 打开 Excel 文件 2
+workbook = openpyxl.load_workbook('D:\毕业设计\文件标注_修改版\L1003班综合课L21-2_3.xlsx')
+# 打开 Excel 需处理统计的文件文件
+# workbook = openpyxl.load_workbook('L1003_20221115.xlsx')
+
+# 选择工作表
+sheet_name = 'Sheet1'
+
+# 选择要操作的工作表（Sheet1）
+worksheet = workbook['Sheet1']
+
+# 创建空的数据列表
+data = []
+data_new = []
+
+# 迭代遍历工作表的每一行
+for row in worksheet.iter_rows(min_row=2, values_only=True):
+    # 获取第5列和第6列的数据
+    column_b_data = row[1]  # 第2列的数据
+    column_e_data = row[4]  # 第5列的数据
+    column_f_data = row[5]  # 第6列的数据
+    column_g_data = row[6]  # 第7列的数据
+    # 将数据添加到列表
+    data.append((column_b_data, column_e_data, column_f_data, column_g_data))
+
+# 关闭 Excel 文件
+workbook.close()
+
+# 创建两个空的列表，用于存储取出的数
+column_new_b_data = []
+column_new_e_data = []
+column_new_f_data = []
+column_new_g_data = []
+
+# 打印数据列表，将data中的数据取出
+for row in data:
+    column_new_b_data.append(row[0])
+    column_new_e_data.append(row[1])
+    column_new_f_data.append(row[2])
+    column_new_g_data.append(row[3])
+
+# 获取 column_new_e_data 列表的长度
+length = len(column_new_e_data)
+
+# 用FIAS编码规则进行编码，内容存储至data_new之中
+for count in range(length - 1):
+    if column_new_e_data[count] is not None:
+        if column_new_e_data[count + 1] is not None:
+            data_new.append((column_new_e_data[count], column_new_e_data[count + 1]))
+        if column_new_f_data[count + 1] is not None:
+            data_new.append((column_new_e_data[count], column_new_f_data[count + 1]))
+        if column_new_f_data[count] is not None:
+            data_new.append((column_new_f_data[count], column_new_e_data[count + 1]))
+            if column_new_f_data[count + 1] is not None:
+                data_new.append((column_new_f_data[count], column_new_f_data[count + 1]))
+
+print(data_new)
+
+# 打印数据列表
+for row, column in data_new:
+    # 将字符串转换为整数,进行自增操作
+    matrix[row][column] = str(int(matrix[row][column]) + 1)
+
+# 打印矩阵
+# 循环遍历矩阵的每一行
+for row in matrix:
+    # 打印当前行
+    print(row)
+
+# 将矩阵转换为 pandas DataFrame
+df_no1 = pd.DataFrame(matrix)
+
+# 在 DataFrame 的最顶部添加一行标题
+# 只在第一列添加"任务一"，其余列留空或者不赋值
+df_no1.loc[-1] = ['任务一'] + [None] * (len(df_no1.columns) - 1)
+
+# 重新设置索引，确保新增的那一行在最顶部
+df_no1.index = df_no1.index + 1
+df_no1.sort_index(inplace=True)
+
+
+# ******************************************************单项标记编码******************************************************
+data_0_18_num = [('编码', '统计', '占比')]
+
+for i in range(19):
+    data_0_18_num.append((i, 0, 0))
+# data_0_18_num.append((0, 0))
+# print(data_0_18_num)
+
+for count in range(length):
+    if column_new_e_data[count] is not None:
+        index_e_increment = column_new_e_data[count] + 1
+        current_e_value = data_0_18_num[index_e_increment][1]
+        data_0_18_num[index_e_increment] = (data_0_18_num[index_e_increment][0], current_e_value + 1, 0)
+    if column_new_f_data[count] is not None:
+        index_f_increment = column_new_f_data[count] + 1
+        current_f_value = data_0_18_num[index_f_increment][1]
+        data_0_18_num[index_f_increment] = (data_0_18_num[index_f_increment][0], current_f_value + 1, 0)
+
+for i in range(1, 20):
+    data_0_18_num[i] = (data_0_18_num[i][0], data_0_18_num[i][1], f'{data_0_18_num[i][1] * 100 / length:.2f}%')
+
+# 删除 data_0_18_num 的第二行数据并存储起来，稍后将其添加到末尾
+second_row_data = data_0_18_num.pop(1)
+
+# 创建pandas的DataFrame
+df_no2 = pd.DataFrame(data_0_18_num)
+
+# 现在将先前移除的第二行添加到DataFrame的末尾
+df_no2 = pd.concat([df_no2, pd.DataFrame([second_row_data])], ignore_index=True)
+
+
+# ********************************************************标注统计*******************************************************
+data_teacher_num = [('说话人', '统计', '占比'), ('闻亭老师', 0, 0), ('学生', 0, 0)]
+for count in range(length):
+    if column_new_b_data[count] is not None:
+        if column_new_b_data[count] == '闻亭老师':
+            # index_b_increment = data_teacher_num[1][1] + 1
+            current_b_value = data_teacher_num[1][1] + 1
+            data_teacher_num[1] = (data_teacher_num[1][0], data_teacher_num[1][1] + 1, 0)
+
+data_teacher_num[2] = (data_teacher_num[2][0], length - data_teacher_num[1][1], 0)
+
+# 算占比
+data_teacher_num[1] = (data_teacher_num[1][0], data_teacher_num[1][1], f'{data_teacher_num[1][1] * 100 / (data_teacher_num[1][1] + data_teacher_num[2][1]):.2f}%')
+data_teacher_num[2] = (data_teacher_num[2][0], data_teacher_num[2][1], f'{data_teacher_num[2][1] * 100 / (data_teacher_num[1][1] + data_teacher_num[2][1]):.2f}%')
+
+# 创建pandas的DataFrame
+df_no3 = pd.DataFrame(data_teacher_num)
+
+
+# ********************************************************双重编码*******************************************************
+# 存储所有的行为信息
+data_behavior = ['技术问题', '接受情感', '鼓励表扬', '采纳意见', '开放性问题', '封闭性问题', '讲授', '指示', '批评', '被动应答',
+                 '主动应答', '主动提问', '与同学讨论', '无助于教学的混乱', '思考', '做练习', '教师操纵技术', '学生操纵技术', '技术作用于学生']
+
+data_double_num = [('指标', '统计', '释义')]
+
+for count in range(length):
+    if column_new_e_data[count] is not None and column_new_f_data[count] is not None:
+        # 使用一个"已找到"标记来跟踪是否在data_double_num找到匹配的元素
+        found = False
+        # 遍历除了标题行之外的data_double_num元素
+        for i in range(1, len(data_double_num)):
+            if (column_new_e_data[count], column_new_f_data[count]) == data_double_num[i][0]:
+                # 如果找到一个匹配项，则增加统计数并设置标记为True
+                data_double_num[i] = ((data_double_num[i][0][0], data_double_num[i][0][1]), data_double_num[i][1] + 1,
+                                      data_double_num[i][2])
+                found = True
+                break  # 找到后即退出for循环
+        # 如果没有找到匹配项则尾部追加
+        if not found:
+            data_double_num.append(((column_new_e_data[count], column_new_f_data[count]), 1,
+                                    data_behavior[column_new_e_data[count]] + '+' + data_behavior[column_new_f_data[count]]))
+
+# 使用列表的 sort 方法来排序，语法与 sorted 类似
+# 由于表头不参与排序，我们从索引1开始对列表进行排序
+sorted_data_double_num = [data_double_num[0]] + sorted(data_double_num[1:], key=lambda x: (x[0][0], x[0][1]))
+
+# 创建pandas的DataFrame
+df_no4 = pd.DataFrame(sorted_data_double_num)
+
+
+# *******************************************************19~23统计*******************************************************
+data_part1_num = [('环节', '统计', '占比'), ('19组织教学', 0, 0), ('20复习', 0, 0), ('21讲练新内容', 0, 0),
+                  ('22巩固新内容', 0, 0), ('23布置作业', 0, 0), ('总计', 0, 0)]
+
+for count in range(length):
+    if column_new_g_data[count] is not None:
+        data_part1_num[column_new_g_data[count] - 18] = (data_part1_num[column_new_g_data[count] - 18][0],
+                                                         data_part1_num[column_new_g_data[count] - 18][1] + 1, 0)
+
+# 遍历除了标题行之外的data_part1_num元素
+for i in range(1, len(data_part1_num) - 1):
+    data_part1_num[i] = (data_part1_num[i][0], data_part1_num[i][1], f'{data_part1_num[i][1] * 100 / length:.2f}%')
+data_part1_num[6] = (data_part1_num[6][0], length, '100%')
+
+# 创建pandas的DataFrame
+df_no5_part1 = pd.DataFrame(data_part1_num)
+
+data_part2_num = [('19组织教学行为', '统计', '占比')]
+data_part3_num = [('20复习行为', '统计', '占比')]
+data_part4_num = [('21讲练新内容行为', '统计', '占比')]
+data_part5_num = [('22巩固新内容行为', '统计', '占比')]
+data_part6_num = [('23布置作业行为', '统计', '占比')]
+part2_num = 0
+part3_num = 0
+part4_num = 0
+part5_num = 0
+part6_num = 0
+
+for count in range(length):
+    if column_new_g_data[count] is not None:
+        if column_new_g_data[count] == 19:
+            if column_new_e_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part2_num找到匹配的元素
+                found2e = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part2_num)):
+                    if column_new_e_data[count] == data_part2_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part2_num[i] = (data_part2_num[i][0], data_part2_num[i][1] + 1, 0)
+                        part2_num += 1
+                        found2e = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found2e:
+                    part2_num += 1
+                    data_part2_num.append((column_new_e_data[count], 1, 0))
+
+            if column_new_f_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part2_num找到匹配的元素
+                found2f = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part2_num)):
+                    if column_new_f_data[count] == data_part2_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part2_num[i] = (data_part2_num[i][0], data_part2_num[i][1] + 1, 0)
+                        part2_num += 1
+                        found2f = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found2f:
+                    part2_num += 1
+                    data_part2_num.append((column_new_f_data[count], 1, 0))
+
+        if column_new_g_data[count] == 20:
+            if column_new_e_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part3_num找到匹配的元素
+                found3e = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part3_num)):
+                    if column_new_e_data[count] == data_part3_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part3_num[i] = (data_part3_num[i][0], data_part3_num[i][1] + 1, 0)
+                        part3_num += 1
+                        found3e = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found3e:
+                    part3_num += 1
+                    data_part3_num.append((column_new_e_data[count], 1, 0))
+
+            if column_new_f_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part3_num找到匹配的元素
+                found3f = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part3_num)):
+                    if column_new_f_data[count] == data_part3_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part3_num[i] = (data_part3_num[i][0], data_part3_num[i][1] + 1, 0)
+                        part3_num += 1
+                        found3f = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found3f:
+                    part3_num += 1
+                    data_part3_num.append((column_new_f_data[count], 1, 0))
+
+        if column_new_g_data[count] == 21:
+            if column_new_e_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part4_num找到匹配的元素
+                found4e = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part4_num)):
+                    if column_new_e_data[count] == data_part4_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part4_num[i] = (data_part4_num[i][0], data_part4_num[i][1] + 1, 0)
+                        part4_num += 1
+                        found4e = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found4e:
+                    part4_num += 1
+                    data_part4_num.append((column_new_e_data[count], 1, 0))
+
+            if column_new_f_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part4_num找到匹配的元素
+                found4f = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part4_num)):
+                    if column_new_f_data[count] == data_part4_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part4_num[i] = (data_part4_num[i][0], data_part4_num[i][1] + 1, 0)
+                        part4_num += 1
+                        found4f = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found4f:
+                    part4_num += 1
+                    data_part4_num.append((column_new_f_data[count], 1, 0))
+
+        if column_new_g_data[count] == 22:
+            if column_new_e_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part5_num找到匹配的元素
+                found5e = False
+                # 遍历除了标题行之外的data_part4_num元素
+                for i in range(1, len(data_part5_num)):
+                    if column_new_e_data[count] == data_part5_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part5_num[i] = (data_part5_num[i][0], data_part5_num[i][1] + 1, 0)
+                        part5_num += 1
+                        found5e = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found5e:
+                    part5_num += 1
+                    data_part5_num.append((column_new_e_data[count], 1, 0))
+
+            if column_new_f_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part5_num找到匹配的元素
+                found5f = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part5_num)):
+                    if column_new_f_data[count] == data_part5_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part5_num[i] = (data_part5_num[i][0], data_part5_num[i][1] + 1, 0)
+                        part5_num += 1
+                        found5f = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found5f:
+                    part5_num += 1
+                    data_part5_num.append((column_new_f_data[count], 1, 0))
+
+        if column_new_g_data[count] == 23:
+            if column_new_e_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part6_num找到匹配的元素
+                found6e = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part6_num)):
+                    if column_new_e_data[count] == data_part6_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part6_num[i] = (data_part6_num[i][0], data_part6_num[i][1] + 1, 0)
+                        part6_num += 1
+                        found6e = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found6e:
+                    part6_num += 1
+                    data_part6_num.append((column_new_e_data[count], 1, 0))
+
+            if column_new_f_data[count] is not None:
+                # 使用一个"已找到"标记来跟踪是否在data_part6_num找到匹配的元素
+                found6f = False
+                # 遍历除了标题行之外的data_part2_num元素
+                for i in range(1, len(data_part6_num)):
+                    if column_new_f_data[count] == data_part6_num[i][0]:
+                        # 如果找到一个匹配项，则增加统计数并设置标记为True
+                        data_part6_num[i] = (data_part6_num[i][0], data_part6_num[i][1] + 1, 0)
+                        part6_num += 1
+                        found6f = True
+                        break  # 找到后即退出for循环
+                # 如果没有找到匹配项则尾部追加
+                if not found6f:
+                    part6_num += 1
+                    data_part6_num.append((column_new_f_data[count], 1, 0))
+
+# 遍历除了标题行之外的data_part2_num元素
+for i in range(1, len(data_part2_num)):
+    data_part2_num[i] = (data_part2_num[i][0], data_part2_num[i][1], f'{data_part2_num[i][1] * 100 / part2_num:.2f}%')
+
+# 遍历除了标题行之外的data_part3_num元素
+for i in range(1, len(data_part3_num)):
+    data_part3_num[i] = (data_part3_num[i][0], data_part3_num[i][1], f'{data_part3_num[i][1] * 100 / part3_num:.2f}%')
+
+# 遍历除了标题行之外的data_part4_num元素
+for i in range(1, len(data_part4_num)):
+    data_part4_num[i] = (data_part4_num[i][0], data_part4_num[i][1], f'{data_part4_num[i][1] * 100 / part4_num:.2f}%')
+
+# 遍历除了标题行之外的data_part5_num元素
+for i in range(1, len(data_part5_num)):
+    data_part5_num[i] = (data_part5_num[i][0], data_part5_num[i][1], f'{data_part5_num[i][1] * 100 / part5_num:.2f}%')
+
+# 遍历除了标题行之外的data_part6_num元素
+for i in range(1, len(data_part6_num)):
+    data_part6_num[i] = (data_part6_num[i][0], data_part6_num[i][1], f'{data_part6_num[i][1] * 100 / part6_num:.2f}%')
+
+df_no5_part2 = pd.DataFrame(data_part2_num)
+df_no5_part3 = pd.DataFrame(data_part3_num)
+df_no5_part4 = pd.DataFrame(data_part4_num)
+df_no5_part5 = pd.DataFrame(data_part5_num)
+df_no5_part6 = pd.DataFrame(data_part6_num)
+
+df_no5_1 = pd.concat([df_no5_part2, df_no5_part3, df_no5_part4], ignore_index=True, axis=1)
+df_no5_2 = pd.concat([df_no5_part5, df_no5_part6], ignore_index=True, axis=1)
+df_no5 = pd.concat([df_no5_part1, df_no5_1, df_no5_2], ignore_index=True)
+
+
+# *******************************************************每20统计********************************************************
+data_20per_num = [('行数', '教师行为（1-8）', '学生行为（9-12）', '沉寂（13-15）', '技术（16-18）')]
+
+# 设置每批处理的数据量
+batch_size = 20
+
+# 使用range和step来迭代数据，每次迭代跳过 batch_size 个数据
+for start in range(0, length, batch_size):
+    # 计算这一批结束的下标
+    end = start + batch_size
+    # 如果结束下标超出数据量，设置结束下标为数据量
+    if end > length:
+        end = length
+
+    # 提取出当前批次的数据
+    current_e_batch = column_new_e_data[start:end]
+    current_f_batch = column_new_e_data[start:end]
+
+    teacher_num = 0
+    student_num = 0
+    silence_num = 0
+    tech_num = 0
+    # 进行您的处理操作
+    for i in range(start, end):
+        if column_new_e_data[i] is not None:
+            if 1 <= column_new_e_data[i] <= 8:
+                teacher_num += 1
+            if 9 <= column_new_e_data[i] <= 12:
+                student_num += 1
+            if 13 <= column_new_e_data[i] <= 15:
+                silence_num += 1
+            if 16 <= column_new_e_data[i] <= 18:
+                tech_num += 1
+        if column_new_f_data[i] is not None:
+            if 1 <= column_new_e_data[i] <= 8:
+                teacher_num += 1
+            if 9 <= column_new_e_data[i] <= 12:
+                student_num += 1
+            if 13 <= column_new_e_data[i] <= 15:
+                silence_num += 1
+            if 16 <= column_new_e_data[i] <= 18:
+                tech_num += 1
+
+    data_20per_num.append((str(start) + '-' + str(end), teacher_num, student_num, silence_num, tech_num))
+
+df_no6 = pd.DataFrame(data_20per_num)
+
+
+# ****************************************************数据拼接输出为表*****************************************************
+merged_df = pd.concat([df_no1, df_no2, df_no3, df_no4, df_no5, df_no6], ignore_index=True)
+
+# 将 DataFrame 追加到已创建的 Excel 文件中
+merged_df.to_excel("D:\毕业设计\文件标注_修改版\Data_L21-2.xlsx", index=False, header=False)
